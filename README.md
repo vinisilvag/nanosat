@@ -1,4 +1,4 @@
-# nanosat
+# NanoSAT
 
 An almost-efficient implementation of the Conflit-Driven Clause Learning (CDCL) framework for solving SAT problems in Rust.
 
@@ -6,8 +6,9 @@ This project was developed for learning purposes based on a project I previously
 
 ## Current progress
 
-- [ ] CI
-- [ ] Lexer and parser for DIMACS inputs
+- [x] CI
+- [x] Parser for DIMACS inputs
+- [ ] Improve error handling
 - [ ] CDCL basic architecture
 - [ ] 2-watched literals
 - [ ] VSIDS heuristic
