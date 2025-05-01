@@ -1,8 +1,8 @@
 use std::fmt;
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Literal {
-    pub variable: i32,
+    pub variable: usize,
     pub is_negated: bool,
 }
 
@@ -25,7 +25,7 @@ impl fmt::Display for Literal {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Clause {
     pub literals: Vec<Literal>,
 }
@@ -61,4 +61,11 @@ impl fmt::Display for Formula {
                 .join(" ∧ ")
         )
     }
+}
+
+#[derive(Debug)]
+pub struct Assignment {
+    pub decision_level: usize,
+    pub variable: usize,
+    pub value: bool,
 }

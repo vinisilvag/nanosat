@@ -1,3 +1,5 @@
+mod error;
+
 use std::{
     fs::File,
     io::{BufRead, BufReader},
@@ -5,8 +7,10 @@ use std::{
 
 use crate::types::{Clause, Formula, Literal};
 
-pub fn parse_instance(problem: BufReader<File>) -> Formula {
+pub fn parse_instance(problem: BufReader<File>) -> (usize, usize, Formula) {
     let mut clauses: Vec<Clause> = Vec::new();
+    let mut variable_num: usize = 0;
+    let mut clause_num: usize = 0;
 
     let mut current_clause = Clause {
         literals: Vec::new(),
@@ -25,13 +29,16 @@ pub fn parse_instance(problem: BufReader<File>) -> Formula {
                     };
                 } else {
                     current_clause.literals.push(Literal {
-                        variable: parsed_token.abs(),
+                        variable: parsed_token.abs() as usize,
                         is_negated: parsed_token < 0,
                     });
                 }
             }
+        } else if tokens[0] == "p" {
+            variable_num = tokens[2].parse::<usize>().unwrap();
+            clause_num = tokens[3].parse::<usize>().unwrap();
         }
     }
 
-    Formula { clauses }
+    (variable_num, clause_num, Formula { clauses })
 }
