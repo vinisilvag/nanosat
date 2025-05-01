@@ -15,7 +15,7 @@ pub fn parse_instance(problem: BufReader<File>) -> Formula {
     for line in problem.lines() {
         let line = line.unwrap();
         let tokens: Vec<&str> = line.split_whitespace().collect();
-        if tokens.len() != 0 && tokens[0] != "p" && tokens[0] != "c" {
+        if !tokens.is_empty() && tokens[0] != "p" && tokens[0] != "c" {
             for token in tokens {
                 let parsed_token = token.parse::<i32>().unwrap();
                 if parsed_token == 0 {
