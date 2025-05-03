@@ -1,3 +1,5 @@
+//! Parser implementation.
+
 mod error;
 
 use std::{
@@ -29,7 +31,7 @@ pub fn parse_instance(problem: BufReader<File>) -> (usize, usize, Formula) {
                     };
                 } else {
                     current_clause.literals.push(Literal {
-                        variable: parsed_token.abs() as usize,
+                        variable: parsed_token.unsigned_abs() as usize,
                         is_negated: parsed_token < 0,
                     });
                 }

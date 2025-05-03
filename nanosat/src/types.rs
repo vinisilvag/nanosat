@@ -1,3 +1,5 @@
+//! Main types and data structures.
+
 use std::fmt;
 
 #[derive(Debug, Clone)]
