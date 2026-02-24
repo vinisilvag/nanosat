@@ -1,0 +1,3 @@
+[workspace]
+members = ["nanosat", "parser"]
+resolver = "2"
