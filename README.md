@@ -6,9 +6,10 @@ This project was developed for learning purposes based on a project I previously
 
 ## Current progress
 
-- [ ] CI
-- [ ] Parser for DIMACS inputs
-- [ ] Proper error handling
+- [x] CI
+- [x] CLI
+- [x] Parser for DIMACS inputs
+- [ ] Proper error handling (thiserror, anyhow, etc)
 - [ ] CDCL basic architecture
 - [ ] 2-watched literals
 - [ ] VSIDS heuristic
