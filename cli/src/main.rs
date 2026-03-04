@@ -24,12 +24,15 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
     }
 
     let cnf = parse_cnf(args.input)?;
+    let model = solve(cnf);
 
-    println!("{:?}", cnf);
-
-    solve();
-
-    // Output
+    match model {
+        None => println!("s UNSATISFIABLE"),
+        Some(m) => {
+            println!("s SATISFIABLE");
+            println!("{:?}", m);
+        }
+    }
 
     Ok(())
 }

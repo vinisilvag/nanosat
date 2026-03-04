@@ -4,14 +4,35 @@ pub struct Literal {
     pub is_negated: bool,
 }
 
+impl Literal {
+    pub fn negate(&self) -> Literal {
+        Literal {
+            value: self.value,
+            is_negated: !self.is_negated,
+        }
+    }
+}
+
 #[derive(Debug)]
 pub struct Clause {
     pub literals: Vec<Literal>,
 }
 
+impl Clause {
+    pub fn clause_len(&self) -> usize {
+        self.literals.len()
+    }
+}
+
 #[derive(Debug)]
 pub struct Formula {
     pub clauses: Vec<Clause>,
+}
+
+impl Formula {
+    pub fn formula_len(&self) -> usize {
+        self.clauses.len()
+    }
 }
 
 #[derive(Debug)]
@@ -42,6 +63,30 @@ impl Cnf {
             formula: Formula {
                 clauses: parsed_clauses,
             },
+        }
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct Assignment {
+    pub variable: usize,
+    pub value: bool,
+    pub decision_level: usize,
+    pub antecedent: Option<usize>,
+}
+
+impl Assignment {
+    pub fn new(
+        variable: usize,
+        value: bool,
+        decision_level: usize,
+        antecedent: Option<usize>,
+    ) -> Self {
+        Assignment {
+            variable,
+            value,
+            decision_level,
+            antecedent,
         }
     }
 }

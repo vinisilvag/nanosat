@@ -1,7 +1,17 @@
 pub mod core;
+pub mod solver;
 
-pub fn solve() {
-    println!("solve");
+use crate::{
+    core::{Assignment, Cnf},
+    solver::Solver,
+};
+
+pub fn solve(cnf: Cnf) -> Option<Vec<i32>> {
+    let solver = Solver::new(cnf);
+
+    let model = solver.solve();
+
+    Some(Vec::new())
 }
 
 #[cfg(test)]
