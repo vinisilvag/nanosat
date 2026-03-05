@@ -1,4 +1,4 @@
-#[derive(Debug)]
+#[derive(Debug, Copy, Clone)]
 pub struct Literal {
     pub value: usize,
     pub is_negated: bool,
@@ -13,7 +13,7 @@ impl Literal {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Clause {
     pub literals: Vec<Literal>,
 }
@@ -72,7 +72,7 @@ pub struct Assignment {
     pub variable: usize,
     pub value: bool,
     pub decision_level: usize,
-    pub antecedent: Option<usize>,
+    pub antecedent: Option<Clause>,
 }
 
 impl Assignment {
@@ -80,7 +80,7 @@ impl Assignment {
         variable: usize,
         value: bool,
         decision_level: usize,
-        antecedent: Option<usize>,
+        antecedent: Option<Clause>,
     ) -> Self {
         Assignment {
             variable,

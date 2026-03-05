@@ -7,7 +7,7 @@ use crate::{
 };
 
 pub fn solve(cnf: Cnf) -> Option<Vec<i32>> {
-    let solver = Solver::new(cnf);
+    let mut solver = Solver::new(cnf);
 
     let model = solver.solve();
 
