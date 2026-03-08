@@ -6,15 +6,7 @@ use crate::{
     solver::Solver,
 };
 
-pub fn solve(cnf: Cnf) -> Option<Vec<i32>> {
+pub fn solve(cnf: Cnf) -> Option<Vec<Assignment>> {
     let mut solver = Solver::new(cnf);
-
-    let model = solver.solve();
-
-    Some(Vec::new())
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
+    solver.solve()
 }

@@ -13,6 +13,8 @@ This project was developed for learning purposes based on a project I previously
 - [ ] CDCL basic architecture
 - [ ] 2-watched literals
 - [ ] VSIDS heuristic
+- [ ] Unit tests
+- [ ] DRAT proof generation
 - [ ] Benchmark set
 - [ ] Evaluation against MiniSAT
 

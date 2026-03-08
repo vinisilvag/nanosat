@@ -1,7 +1,7 @@
 use clap::Parser;
 use std::path::PathBuf;
 
-use nanosat::solve;
+use nanosat::{core::Assignment, solve};
 use parser::parse_cnf;
 
 #[derive(Parser, Debug)]
@@ -10,6 +10,17 @@ struct Args {
     /// Path to the .cnf input file
     #[arg(short, long, value_name = "FILE")]
     input: PathBuf,
+}
+
+fn print_assignment(model: Vec<Assignment>) {
+    for assignment in model {
+        if assignment.value {
+            print!("-{:?} ", assignment.variable);
+        } else {
+            print!("{:?} ", assignment.variable);
+        }
+    }
+    println!();
 }
 
 fn run() -> Result<(), Box<dyn std::error::Error>> {
@@ -30,7 +41,8 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
         None => println!("s UNSATISFIABLE"),
         Some(m) => {
             println!("s SATISFIABLE");
-            println!("{:?}", m);
+            println!("{:#?}", m);
+            // print_assignment(m);
         }
     }
 

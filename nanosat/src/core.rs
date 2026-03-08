@@ -1,4 +1,4 @@
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Copy, Clone, PartialOrd, Ord, Hash)]
 pub struct Literal {
     pub value: usize,
     pub is_negated: bool,
@@ -13,6 +13,13 @@ impl Literal {
     }
 }
 
+impl PartialEq for Literal {
+    fn eq(&self, other: &Self) -> bool {
+        self.value == other.value && self.is_negated == other.is_negated
+    }
+}
+impl Eq for Literal {}
+
 #[derive(Debug, Clone)]
 pub struct Clause {
     pub literals: Vec<Literal>,
@@ -23,6 +30,13 @@ impl Clause {
         self.literals.len()
     }
 }
+
+impl PartialEq for Clause {
+    fn eq(&self, other: &Self) -> bool {
+        self.literals == other.literals
+    }
+}
+impl Eq for Clause {}
 
 #[derive(Debug)]
 pub struct Formula {
