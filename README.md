@@ -15,7 +15,7 @@ This project was developed for learning purposes based on a project I previously
 - [x] VSIDS heuristic
 - [x] Unit tests
 - [ ] Regression tests
-- [ ] DRAT proof generation
+- [x] DRAT proof generation
 - [ ] Benchmark set
 - [ ] Evaluation against MiniSAT
 

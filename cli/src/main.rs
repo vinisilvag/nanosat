@@ -1,9 +1,12 @@
 pub mod error;
 
 use clap::Parser;
-use std::path::PathBuf;
+use std::{fs::File, io::Write, path::PathBuf};
 
-use nanosat::{core::Assignment, solve};
+use nanosat::{
+    core::{Assignment, Clause},
+    solve,
+};
 use parser::parse_cnf;
 
 use crate::error::{AppError, IoError};
@@ -29,6 +32,31 @@ fn print_assignment(model: Vec<Assignment>) {
     println!();
 }
 
+fn generate_drat_proof(
+    input: &PathBuf,
+    learned_clauses: Vec<Clause>,
+) -> Result<(), IoError> {
+    let proof = input.with_extension("drat");
+    let mut proof_file =
+        File::create(&proof).map_err(|_| IoError::FailedToCreateProofFile)?;
+
+    for clause in learned_clauses {
+        for literal in clause.literals {
+            if !literal.is_negated {
+                write!(proof_file, "{} ", literal.value)
+                    .map_err(|_| IoError::FailedToWriteToProofFile)?;
+            } else {
+                write!(proof_file, "-{} ", literal.value)
+                    .map_err(|_| IoError::FailedToWriteToProofFile)?;
+            }
+        }
+        write!(proof_file, "0\n")
+            .map_err(|_| IoError::FailedToWriteToProofFile)?;
+    }
+
+    Ok(())
+}
+
 fn run() -> Result<(), AppError> {
     let args = Args::parse();
 
@@ -40,15 +68,16 @@ fn run() -> Result<(), AppError> {
         return Err(AppError::Io(IoError::MissingExtension));
     }
 
-    let cnf = parse_cnf(args.input)?;
-    let model = solve(cnf);
+    let cnf = parse_cnf(&args.input)?;
+    let out = solve(cnf);
 
-    match model {
-        None => println!("s UNSATISFIABLE"),
-        Some(m) => {
+    match out {
+        Some((m, c)) => {
             println!("s SATISFIABLE");
             print_assignment(m);
+            generate_drat_proof(&args.input, c)?;
         }
+        None => println!("s UNSATISFIABLE"),
     }
 
     Ok(())

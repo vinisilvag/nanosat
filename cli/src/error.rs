@@ -9,6 +9,12 @@ pub enum IoError {
 
     #[error("input file must have some extension")]
     MissingExtension,
+
+    #[error("failed to create proof file")]
+    FailedToCreateProofFile,
+
+    #[error("failed to write to proof file")]
+    FailedToWriteToProofFile,
 }
 
 #[derive(Error, Debug)]

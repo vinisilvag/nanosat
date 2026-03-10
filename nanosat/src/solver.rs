@@ -29,6 +29,8 @@ pub struct Solver {
     activity: HashMap<Literal, f32>,
     decay_factor: f32,
     increment: f32,
+
+    learned_clauses: Vec<Clause>,
 }
 
 impl Solver {
@@ -60,6 +62,8 @@ impl Solver {
             activity,
             decay_factor: 0.95,
             increment,
+
+            learned_clauses: Vec::new(),
         }
     }
 
@@ -94,13 +98,20 @@ impl Solver {
             }
         }
 
-        candidates.sort_by(|a, b| self.activity[b].partial_cmp(&self.activity[a]).unwrap());
+        candidates.sort_by(|a, b| {
+            self.activity[b].partial_cmp(&self.activity[a]).unwrap()
+        });
 
         let candidate = candidates.first().unwrap();
         (candidate.value, !candidate.is_negated)
     }
 
-    fn assign(&mut self, variable: usize, value: bool, antecedent: Option<Clause>) {
+    fn assign(
+        &mut self,
+        variable: usize,
+        value: bool,
+        antecedent: Option<Clause>,
+    ) {
         self.m[variable] = Some(value);
         self.assignments.push(Assignment::new(
             variable,
@@ -144,11 +155,14 @@ impl Solver {
             return ClauseStatus::Satisfied;
         }
 
-        if values.iter().filter(|x| **x == Some(false)).count() == values.len() {
+        if values.iter().filter(|x| **x == Some(false)).count() == values.len()
+        {
             return ClauseStatus::Unsatisfied;
         }
 
-        if values.iter().filter(|x| **x == Some(false)).count() == values.len() - 1 {
+        if values.iter().filter(|x| **x == Some(false)).count()
+            == values.len() - 1
+        {
             let index = values.iter().position(|x| x.is_none()).unwrap();
             return ClauseStatus::Unit(literals[index]);
         }
@@ -183,7 +197,8 @@ impl Solver {
 
     fn resolution(&self, a: Clause, b: Clause, x: usize) -> Clause {
         // Group literals from both clauses
-        let mut new_literals: HashSet<_> = a.literals.into_iter().chain(b.literals).collect();
+        let mut new_literals: HashSet<_> =
+            a.literals.into_iter().chain(b.literals).collect();
 
         // Remove appearances of x and -x
         new_literals.retain(|lit| {
@@ -212,14 +227,18 @@ impl Solver {
             .literals
             .iter()
             .filter(|lit| {
-                self.assignments
-                    .iter()
-                    .any(|a| a.variable == lit.value && a.decision_level == self.decision_level)
+                self.assignments.iter().any(|a| {
+                    a.variable == lit.value
+                        && a.decision_level == self.decision_level
+                })
             })
             .count()
     }
 
-    fn conflict_analysis(&mut self, conflict_clause: Clause) -> (Option<usize>, Option<Clause>) {
+    fn conflict_analysis(
+        &mut self,
+        conflict_clause: Clause,
+    ) -> (Option<usize>, Option<Clause>) {
         if self.decision_level == 0 {
             return (None, None);
         }
@@ -243,7 +262,11 @@ impl Solver {
             let antecedent = literal.antecedent.clone().unwrap();
 
             // Update learnt clause
-            learnt_clause = self.resolution(learnt_clause.clone(), antecedent, literal.variable);
+            learnt_clause = self.resolution(
+                learnt_clause.clone(),
+                antecedent,
+                literal.variable,
+            );
 
             implied_literals = self
                 .assignments
@@ -292,7 +315,8 @@ impl Solver {
     }
 
     fn add_learnt_clause(&mut self, learnt_clause: Clause) {
-        self.formula.clauses.push(learnt_clause);
+        self.formula.clauses.push(learnt_clause.clone());
+        self.learned_clauses.push(learnt_clause);
     }
 
     fn backjump(&mut self, new_decision_level: usize) {
@@ -308,7 +332,7 @@ impl Solver {
         }
     }
 
-    pub fn solve(&mut self) -> Option<Vec<Assignment>> {
+    pub fn solve(&mut self) -> Option<(Vec<Assignment>, Vec<Clause>)> {
         if let PropagationStatus::Conflict(_) = self.propagate() {
             return None;
         }
@@ -339,7 +363,7 @@ impl Solver {
             }
         }
 
-        Some(self.assignments.clone())
+        Some((self.assignments.clone(), self.learned_clauses.clone()))
     }
 }
 

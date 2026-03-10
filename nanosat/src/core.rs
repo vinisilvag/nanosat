@@ -57,7 +57,11 @@ pub struct Cnf {
 }
 
 impl Cnf {
-    pub fn new(num_vars: usize, num_clauses: usize, clauses: Vec<Vec<i32>>) -> Self {
+    pub fn new(
+        num_vars: usize,
+        num_clauses: usize,
+        clauses: Vec<Vec<i32>>,
+    ) -> Self {
         let parsed_clauses: Vec<Clause> = clauses
             .into_iter()
             .map(|clause| Clause {

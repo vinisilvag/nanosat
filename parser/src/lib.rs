@@ -35,7 +35,7 @@ fn parse_clause_lits(input: &str) -> IResult<&str, Vec<i32>> {
     separated_list1(multispace1, nom_i32).parse(input)
 }
 
-pub fn parse_cnf(input: PathBuf) -> Result<Cnf, ParserError> {
+pub fn parse_cnf(input: &PathBuf) -> Result<Cnf, ParserError> {
     let file = File::open(input).map_err(|_| ParserError::FailedToOpenFile)?;
     let reader = BufReader::new(file);
 
@@ -55,14 +55,16 @@ pub fn parse_cnf(input: PathBuf) -> Result<Cnf, ParserError> {
 
         // Header
         if line.starts_with('p') {
-            let (_, header) = parse_header_line(line).map_err(|_| ParserError::InvalidHeader)?;
+            let (_, header) = parse_header_line(line)
+                .map_err(|_| ParserError::InvalidHeader)?;
             num_vars = Some(header.0);
             num_clauses = Some(header.1);
             continue;
         }
 
         // Clause
-        let (_, ints) = parse_clause_lits(line).map_err(|_| ParserError::InvalidClause)?;
+        let (_, ints) =
+            parse_clause_lits(line).map_err(|_| ParserError::InvalidClause)?;
         for lit in ints {
             if lit == 0 {
                 clauses.push(std::mem::take(&mut current_clause));
@@ -76,11 +78,6 @@ pub fn parse_cnf(input: PathBuf) -> Result<Cnf, ParserError> {
     if !current_clause.is_empty() {
         return Err(ParserError::UnterminatedClause);
     }
-
-    // // Missing complete header
-    // if num_vars.is_none() || num_clauses.is_none() {
-    //     return Err("missing complete CNF header".into());
-    // }
 
     Ok(Cnf::new(num_vars.unwrap(), num_clauses.unwrap(), clauses))
 }
