@@ -15,6 +15,11 @@ enum PropagationStatus {
     Conflict(Clause),
 }
 
+pub enum SolverOutput {
+    Sat(Vec<Assignment>),
+    Unsat(Vec<Clause>),
+}
+
 pub struct Solver {
     formula: Formula,
     num_vars: usize,
@@ -332,9 +337,9 @@ impl Solver {
         }
     }
 
-    pub fn solve(&mut self) -> Option<(Vec<Assignment>, Vec<Clause>)> {
+    pub fn solve(&mut self) -> SolverOutput {
         if let PropagationStatus::Conflict(_) = self.propagate() {
-            return None;
+            return SolverOutput::Unsat(self.learned_clauses.clone());
         }
 
         while !self.all_clauses_are_satisfied() {
@@ -353,7 +358,9 @@ impl Solver {
                             self.backjump(b);
                             self.decision_level = b;
                         } else {
-                            return None;
+                            return SolverOutput::Unsat(
+                                self.learned_clauses.clone(),
+                            );
                         }
                     }
                     PropagationStatus::Unresolved => {
@@ -363,7 +370,7 @@ impl Solver {
             }
         }
 
-        Some((self.assignments.clone(), self.learned_clauses.clone()))
+        SolverOutput::Sat(self.assignments.clone())
     }
 }
 

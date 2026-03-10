@@ -2,11 +2,11 @@ pub mod core;
 pub mod solver;
 
 use crate::{
-    core::{Assignment, Clause, Cnf},
-    solver::Solver,
+    core::Cnf,
+    solver::{Solver, SolverOutput},
 };
 
-pub fn solve(cnf: Cnf) -> Option<(Vec<Assignment>, Vec<Clause>)> {
+pub fn solve(cnf: Cnf) -> SolverOutput {
     let mut solver = Solver::new(cnf);
     solver.solve()
 }

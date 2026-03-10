@@ -6,6 +6,7 @@ use std::{fs::File, io::Write, path::PathBuf};
 use nanosat::{
     core::{Assignment, Clause},
     solve,
+    solver::SolverOutput,
 };
 use parser::parse_cnf;
 
@@ -24,9 +25,9 @@ fn print_assignment(model: Vec<Assignment>) {
     sorted.sort_by_key(|k| k.variable);
     for assignment in sorted {
         if assignment.value {
-            print!("-{:?} ", assignment.variable);
-        } else {
             print!("{:?} ", assignment.variable);
+        } else {
+            print!("-{:?} ", assignment.variable);
         }
     }
     println!();
@@ -69,15 +70,17 @@ fn run() -> Result<(), AppError> {
     }
 
     let cnf = parse_cnf(&args.input)?;
-    let out = solve(cnf);
+    let output = solve(cnf);
 
-    match out {
-        Some((m, c)) => {
+    match output {
+        SolverOutput::Sat(m) => {
             println!("s SATISFIABLE");
             print_assignment(m);
+        }
+        SolverOutput::Unsat(c) => {
+            println!("s UNSATISFIABLE");
             generate_drat_proof(&args.input, c)?;
         }
-        None => println!("s UNSATISFIABLE"),
     }
 
     Ok(())
