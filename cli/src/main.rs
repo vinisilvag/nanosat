@@ -1,8 +1,12 @@
+pub mod error;
+
 use clap::Parser;
 use std::path::PathBuf;
 
 use nanosat::{core::Assignment, solve};
 use parser::parse_cnf;
+
+use crate::error::{AppError, IoError};
 
 #[derive(Parser, Debug)]
 #[command(author, version, about, long_about = None)]
@@ -23,15 +27,15 @@ fn print_assignment(model: Vec<Assignment>) {
     println!();
 }
 
-fn run() -> Result<(), Box<dyn std::error::Error>> {
+fn run() -> Result<(), AppError> {
     let args = Args::parse();
 
     if let Some(extension) = args.input.extension() {
         if extension != "cnf" {
-            return Err("input file must have .cnf extension".into());
+            return Err(AppError::Io(IoError::DifferentExtension));
         }
     } else {
-        return Err("input file must have some extension".into());
+        return Err(AppError::Io(IoError::MissingExtension));
     }
 
     let cnf = parse_cnf(args.input)?;
@@ -41,8 +45,7 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
         None => println!("s UNSATISFIABLE"),
         Some(m) => {
             println!("s SATISFIABLE");
-            println!("{:#?}", m);
-            // print_assignment(m);
+            print_assignment(m);
         }
     }
 
@@ -51,7 +54,7 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
 
 fn main() {
     if let Err(e) = run() {
-        eprintln!("error: {}", e);
+        eprintln!("{}", e);
         std::process::exit(1);
     }
 }

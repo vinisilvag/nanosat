@@ -6,3 +6,4 @@ edition = "2024"
 [dependencies]
 nanosat = { path = "../nanosat" }
 nom = "8.0.0"
+thiserror = "2.0.18"

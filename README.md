@@ -10,10 +10,11 @@ This project was developed for learning purposes based on a project I previously
 - [x] CLI
 - [x] Parser for DIMACS inputs
 - [ ] Proper error handling (thiserror, anyhow, etc)
-- [ ] CDCL basic architecture
+- [x] CDCL basic architecture
 - [ ] 2-watched literals
 - [ ] VSIDS heuristic
-- [ ] Unit tests
+- [x] Unit tests
+- [ ] Regression tests
 - [ ] DRAT proof generation
 - [ ] Benchmark set
 - [ ] Evaluation against MiniSAT

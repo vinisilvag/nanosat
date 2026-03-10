@@ -64,7 +64,7 @@ impl Cnf {
                 literals: clause
                     .into_iter()
                     .map(|lit| Literal {
-                        value: lit.abs() as usize,
+                        value: lit.unsigned_abs() as usize,
                         is_negated: lit < 0,
                     })
                     .collect(),

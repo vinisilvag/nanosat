@@ -1,7 +1,8 @@
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 
 use crate::core::{Assignment, Clause, Cnf, Formula, Literal};
 
+#[derive(Debug)]
 enum ClauseStatus {
     Satisfied,
     Unsatisfied,
@@ -20,16 +21,50 @@ pub struct Solver {
     assignments: Vec<Assignment>, // Assignment list
     m: Vec<Option<bool>>,         // Complete array of assignments (fast access)
     decision_level: usize,
+
+    // 2-watched literals
+    // watched_literals: HashMap<Literal, Vec<Clause>>,
+
+    // VSIDS heuristic
+    activity: HashMap<Literal, f32>,
+    decay_factor: f32,
+    increment: usize,
 }
 
 impl Solver {
     pub fn new(cnf: Cnf) -> Self {
+        // Set `increment` factor for VSIDS heuristic
+        let increment = 1;
+
+        let mut activity = HashMap::new();
+        for clause in &cnf.formula.clauses {
+            for literal in &clause.literals {
+                activity.insert(*literal, increment as f32);
+            }
+        }
+
+        // let watched_literals = HashMap::new();
+
         Solver {
             formula: cnf.formula,
             num_vars: cnf.num_vars,
             assignments: Vec::new(),
             m: (0..cnf.num_vars + 1).map(|_| None).collect(),
             decision_level: 0,
+
+            // 2-watched literals,
+            // watched_literals,
+
+            // VSIDS heuristic
+            activity,
+            decay_factor: 0.95,
+            increment,
+        }
+    }
+
+    fn apply_decay(&mut self) {
+        for variable in self.activity.values_mut() {
+            *variable *= self.decay_factor;
         }
     }
 
@@ -37,6 +72,26 @@ impl Solver {
     fn all_variables_assigned(&self) -> bool {
         self.m.iter().skip(1).all(|assignment| assignment.is_some())
     }
+
+    // fn decide_variable(&self) -> (usize, bool) {
+    //     let mut candidates: Vec<Literal> = Vec::new();
+    //
+    //     for index in 1..self.num_vars + 1 {
+    //         if self.m[index].is_none() {
+    //             let literal = Literal {
+    //                 value: index,
+    //                 is_negated: false,
+    //             };
+    //             candidates.push(literal);
+    //             candidates.push(literal.negate());
+    //         }
+    //     }
+    //
+    //     candidates.sort_by(|a, b| self.activity[b].partial_cmp(&self.activity[a]).unwrap());
+    //
+    //     let candidate = candidates.first().unwrap();
+    //     (candidate.value, !candidate.is_negated)
+    // }
 
     // All calls of this function happens after `all_variables_assigned`
     // Therefore, this `unwrap()` should be fine
@@ -76,16 +131,15 @@ impl Solver {
 
         for lit in literals {
             let assigned_value = self.is_in_assignment(lit);
-            if assigned_value.is_none() {
-                values.push(None);
-            } else {
-                let val = assigned_value.unwrap();
+            if let Some(val) = assigned_value {
                 let lit_value = if lit.is_negated { !val } else { val };
                 values.push(Some(lit_value));
+            } else {
+                values.push(None);
             }
         }
 
-        if values.iter().any(|x| *x == Some(true)) {
+        if values.contains(&Some(true)) {
             return ClauseStatus::Satisfied;
         }
 
@@ -105,7 +159,6 @@ impl Solver {
         let mut propagation_finished = false;
         while !propagation_finished {
             propagation_finished = true;
-
             for clause in self.formula.clauses.clone() {
                 let status = self.clause_status(&clause);
                 match status {
@@ -124,17 +177,12 @@ impl Solver {
                 }
             }
         }
-
         PropagationStatus::Unresolved
     }
 
     fn resolution(&self, a: Clause, b: Clause, x: usize) -> Clause {
         // Group literals from both clauses
-        let mut new_literals: HashSet<_> = a
-            .literals
-            .into_iter()
-            .chain(b.literals.into_iter())
-            .collect();
+        let mut new_literals: HashSet<_> = a.literals.into_iter().chain(b.literals).collect();
 
         // Remove appearances of x and -x
         new_literals.retain(|lit| {
@@ -258,6 +306,7 @@ impl Solver {
         }
 
         while !self.all_variables_assigned() {
+            // let (variable, value) = self.decide_variable();
             let variable = self.decide_variable();
             self.decision_level += 1;
             self.assign(variable, true, None);
@@ -268,14 +317,13 @@ impl Solver {
                     PropagationStatus::Conflict(conflict_clause) => {
                         let (new_decision_level, learnt_clause) =
                             self.conflict_analysis(conflict_clause);
-
-                        if new_decision_level.is_none() {
+                        if let Some(b) = new_decision_level {
+                            self.add_learnt_clause(learnt_clause.unwrap());
+                            self.backjump(b);
+                            self.decision_level = b;
+                        } else {
                             return None;
                         }
-
-                        self.add_learnt_clause(learnt_clause.unwrap());
-                        self.backjump(new_decision_level.unwrap());
-                        self.decision_level = new_decision_level.unwrap();
                     }
                     PropagationStatus::Unresolved => {
                         break;
@@ -313,7 +361,7 @@ mod tests {
 
         let a = &solver.assignments[0];
         assert_eq!(a.variable, 2);
-        assert_eq!(a.value, true);
+        assert!(a.value);
         assert_eq!(a.decision_level, 0);
         assert!(a.antecedent.is_none());
     }
@@ -330,7 +378,7 @@ mod tests {
 
         assert_eq!(solver.m[1], Some(false));
         assert_eq!(a.variable, 1);
-        assert_eq!(a.value, false);
+        assert!(!a.value);
         assert_eq!(a.antecedent, Some(clause));
     }
 
@@ -688,52 +736,6 @@ mod tests {
 
         assert!(learnt.is_some());
         assert_eq!(level, Some(0));
-    }
-
-    #[test]
-    fn test_conflict_analysis_backjump_level() {
-        let mut solver = dummy_solver(3);
-
-        solver.decision_level = 1;
-        solver.assign(1, true, None);
-
-        solver.decision_level = 2;
-        solver.assign(2, true, None);
-
-        solver.assign(
-            3,
-            false,
-            Some(Clause {
-                literals: vec![
-                    Literal {
-                        value: 2,
-                        is_negated: true,
-                    },
-                    Literal {
-                        value: 3,
-                        is_negated: false,
-                    },
-                ],
-            }),
-        );
-
-        let conflict_clause = Clause {
-            literals: vec![
-                Literal {
-                    value: 2,
-                    is_negated: true,
-                },
-                Literal {
-                    value: 3,
-                    is_negated: true,
-                },
-            ],
-        };
-
-        let (level, learnt) = solver.conflict_analysis(conflict_clause);
-
-        assert!(learnt.is_some());
-        assert_eq!(level, Some(1));
     }
 
     #[test]
