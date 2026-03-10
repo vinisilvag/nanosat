@@ -17,7 +17,9 @@ struct Args {
 }
 
 fn print_assignment(model: Vec<Assignment>) {
-    for assignment in model {
+    let mut sorted = model.clone();
+    sorted.sort_by_key(|k| k.variable);
+    for assignment in sorted {
         if assignment.value {
             print!("-{:?} ", assignment.variable);
         } else {

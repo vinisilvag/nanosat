@@ -28,18 +28,19 @@ pub struct Solver {
     // VSIDS heuristic
     activity: HashMap<Literal, f32>,
     decay_factor: f32,
-    increment: usize,
+    increment: f32,
 }
 
 impl Solver {
     pub fn new(cnf: Cnf) -> Self {
         // Set `increment` factor for VSIDS heuristic
-        let increment = 1;
+        let increment = 1.0;
 
         let mut activity = HashMap::new();
         for clause in &cnf.formula.clauses {
             for literal in &clause.literals {
-                activity.insert(*literal, increment as f32);
+                activity.insert(*literal, increment);
+                activity.insert(*&literal.negate(), increment);
             }
         }
 
@@ -68,35 +69,35 @@ impl Solver {
         }
     }
 
-    // TODO: change to `all_clauses_are_satisfied` later
-    fn all_variables_assigned(&self) -> bool {
-        self.m.iter().skip(1).all(|assignment| assignment.is_some())
+    // TODO: change later to use 2-watched literals
+    fn all_clauses_are_satisfied(&self) -> bool {
+        let mut status_acc = Vec::new();
+        for clause in &self.formula.clauses {
+            status_acc.push(self.clause_status(clause));
+        }
+        status_acc
+            .iter()
+            .all(|s| matches!(s, ClauseStatus::Satisfied))
     }
 
-    // fn decide_variable(&self) -> (usize, bool) {
-    //     let mut candidates: Vec<Literal> = Vec::new();
-    //
-    //     for index in 1..self.num_vars + 1 {
-    //         if self.m[index].is_none() {
-    //             let literal = Literal {
-    //                 value: index,
-    //                 is_negated: false,
-    //             };
-    //             candidates.push(literal);
-    //             candidates.push(literal.negate());
-    //         }
-    //     }
-    //
-    //     candidates.sort_by(|a, b| self.activity[b].partial_cmp(&self.activity[a]).unwrap());
-    //
-    //     let candidate = candidates.first().unwrap();
-    //     (candidate.value, !candidate.is_negated)
-    // }
+    fn decide_variable(&self) -> (usize, bool) {
+        let mut candidates: Vec<Literal> = Vec::new();
 
-    // All calls of this function happens after `all_variables_assigned`
-    // Therefore, this `unwrap()` should be fine
-    fn decide_variable(&self) -> usize {
-        self.m.iter().skip(1).position(|&x| x.is_none()).unwrap() + 1
+        for index in 1..self.num_vars + 1 {
+            if self.m[index].is_none() {
+                let literal = Literal {
+                    value: index,
+                    is_negated: false,
+                };
+                candidates.push(literal);
+                candidates.push(literal.negate());
+            }
+        }
+
+        candidates.sort_by(|a, b| self.activity[b].partial_cmp(&self.activity[a]).unwrap());
+
+        let candidate = candidates.first().unwrap();
+        (candidate.value, !candidate.is_negated)
     }
 
     fn assign(&mut self, variable: usize, value: bool, antecedent: Option<Clause>) {
@@ -218,7 +219,7 @@ impl Solver {
             .count()
     }
 
-    fn conflict_analysis(&self, conflict_clause: Clause) -> (Option<usize>, Option<Clause>) {
+    fn conflict_analysis(&mut self, conflict_clause: Clause) -> (Option<usize>, Option<Clause>) {
         if self.decision_level == 0 {
             return (None, None);
         }
@@ -257,6 +258,13 @@ impl Solver {
                 })
                 .collect();
         }
+
+        // Update activity for literals in the learnt clause
+        for literal in &learnt_clause.literals {
+            *self.activity.entry(*literal).or_insert(0.0) += self.increment;
+        }
+        // Apply decay right after
+        self.apply_decay();
 
         let mut decision_levels: Vec<_> = self
             .assignments
@@ -305,11 +313,10 @@ impl Solver {
             return None;
         }
 
-        while !self.all_variables_assigned() {
-            // let (variable, value) = self.decide_variable();
-            let variable = self.decide_variable();
+        while !self.all_clauses_are_satisfied() {
+            let (variable, value) = self.decide_variable();
             self.decision_level += 1;
-            self.assign(variable, true, None);
+            self.assign(variable, value, None);
 
             loop {
                 let propagation_status = self.propagate();
@@ -422,78 +429,6 @@ mod tests {
         assert_eq!(solver.assignments.len(), 2);
         assert!(solver.assignments.iter().any(|a| a.variable == 1));
         assert!(solver.assignments.iter().any(|a| a.variable == 3));
-    }
-
-    // Testing `all_variables_assigned`
-    #[test]
-    fn test_all_variables_assigned_false_when_some_missing() {
-        let mut solver = dummy_solver(3);
-
-        solver.assign(1, true, None);
-        solver.assign(2, false, None);
-
-        assert!(!solver.all_variables_assigned());
-    }
-
-    #[test]
-    fn test_all_variables_assigned_true_when_all_assigned() {
-        let mut solver = dummy_solver(3);
-
-        solver.assign(1, true, None);
-        solver.assign(2, false, None);
-        solver.assign(3, true, None);
-
-        assert!(solver.all_variables_assigned());
-    }
-
-    #[test]
-    fn test_all_variables_assigned_ignores_position_zero() {
-        let mut solver = dummy_solver(2);
-
-        solver.assign(1, true, None);
-        solver.assign(2, false, None);
-
-        solver.m[0] = None;
-        assert!(solver.all_variables_assigned());
-
-        solver.m[0] = Some(true);
-        assert!(solver.all_variables_assigned());
-
-        solver.m[0] = Some(false);
-        assert!(solver.all_variables_assigned());
-    }
-
-    // Testing `decide_variable`
-    #[test]
-    fn test_decide_variable_returns_first_unassigned() {
-        let mut solver = dummy_solver(4);
-        solver.assign(1, true, None);
-        solver.assign(2, false, None);
-        assert_eq!(solver.decide_variable(), 3);
-    }
-
-    #[test]
-    fn test_decide_variable_skips_position_zero() {
-        let mut solver = dummy_solver(2);
-        solver.m[0] = None;
-        solver.assign(1, true, None);
-        assert_eq!(solver.decide_variable(), 2);
-    }
-
-    #[test]
-    fn test_decide_variable_finds_gap_in_assignments() {
-        let mut solver = dummy_solver(4);
-        solver.assign(1, true, None);
-        solver.assign(3, false, None);
-        assert_eq!(solver.decide_variable(), 2);
-    }
-
-    #[test]
-    fn test_decide_variable_when_only_last_is_free() {
-        let mut solver = dummy_solver(3);
-        solver.assign(1, true, None);
-        solver.assign(2, false, None);
-        assert_eq!(solver.decide_variable(), 3);
     }
 
     // Testing `is_in_assignment`
@@ -696,7 +631,7 @@ mod tests {
     // Testing `conflict_analysis`
     #[test]
     fn test_conflict_analysis_level_zero_returns_unsat() {
-        let solver = dummy_solver(2);
+        let mut solver = dummy_solver(2);
 
         let conflict_clause = Clause {
             literals: vec![

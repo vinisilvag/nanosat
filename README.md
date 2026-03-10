@@ -9,10 +9,10 @@ This project was developed for learning purposes based on a project I previously
 - [x] CI
 - [x] CLI
 - [x] Parser for DIMACS inputs
-- [ ] Proper error handling (thiserror, anyhow, etc)
+- [x] Proper error handling (thiserror, anyhow, etc)
 - [x] CDCL basic architecture
 - [ ] 2-watched literals
-- [ ] VSIDS heuristic
+- [x] VSIDS heuristic
 - [x] Unit tests
 - [ ] Regression tests
 - [ ] DRAT proof generation
