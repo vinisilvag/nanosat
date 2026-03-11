@@ -38,3 +38,15 @@ jobs:
       run: rustup default 1.93
     - name: Run tests
       run: cargo --version && cargo test --release --verbose
+
+  coverage:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: taiki-e/install-action@cargo-llvm-cov
+      - name: Upload coverage reports to Codecov
+      - run: cargo llvm-cov --lcov --output-path lcov.info
+      - uses: codecov/codecov-action@v5
+        with:
+          files: lcov.info

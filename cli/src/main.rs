@@ -55,6 +55,8 @@ fn generate_drat_proof(
             .map_err(|_| IoError::FailedToWriteToProofFile)?;
     }
 
+    write!(proof_file, "0\n").map_err(|_| IoError::FailedToWriteToProofFile)?;
+
     Ok(())
 }
 

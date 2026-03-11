@@ -28,7 +28,7 @@ pub struct Solver {
     decision_level: usize,
 
     // 2-watched literals
-    // watched_literals: HashMap<Literal, Vec<Clause>>,
+    watched_literals: HashMap<Literal, Vec<Clause>>,
 
     // VSIDS heuristic
     activity: HashMap<Literal, f32>,
@@ -51,7 +51,7 @@ impl Solver {
             }
         }
 
-        // let watched_literals = HashMap::new();
+        let watched_literals = HashMap::new();
 
         Solver {
             formula: cnf.formula,
@@ -61,7 +61,7 @@ impl Solver {
             decision_level: 0,
 
             // 2-watched literals,
-            // watched_literals,
+            watched_literals,
 
             // VSIDS heuristic
             activity,
@@ -132,11 +132,74 @@ impl Solver {
             .retain_mut(|assignment| assignment.variable != variable);
     }
 
+    fn propagate_unit_clauses(&mut self) -> Vec<Literal> {
+        let mut propagation_stack = Vec::new();
+
+        for clause in self.formula.clauses.clone() {
+            if clause.literals.len() == 1 {
+                let literal = clause.literals.first().unwrap().clone();
+                if self.m[literal.value] == None {
+                    self.assign(literal.value, !literal.is_negated, None);
+                    propagation_stack.push(literal);
+                }
+            }
+        }
+
+        propagation_stack
+    }
+
     // Unique: appears only once
-    // fn propagate_unique_literals(&self) {}
+    fn propagate_unique_literals(&mut self) -> Vec<Literal> {
+        let mut propagation_stack = Vec::new();
+        let mut unique: HashMap<Literal, usize> = HashMap::new();
+
+        for clause in &self.formula.clauses {
+            for literal in &clause.literals {
+                *unique.entry(*literal).or_insert(0) += 1;
+            }
+        }
+
+        for literal in unique.keys() {
+            if unique[literal] == 1 {
+                if self.m[literal.value] == None {
+                    self.assign(literal.value, !literal.is_negated, None);
+                    propagation_stack.push(*literal);
+                }
+            }
+        }
+
+        propagation_stack
+    }
+
     // Pure: appears only positively or negatively
-    // fn propagate_pure_literals(&self) {}
-    // fn propagate() {}
+    fn propagate_pure_literals(&mut self) -> Vec<Literal> {
+        let mut propagation_stack = Vec::new();
+        let mut unique: HashMap<Literal, bool> = HashMap::new();
+
+        for clause in &self.formula.clauses {
+            for literal in &clause.literals {
+                *unique.entry(*literal).or_insert(false) = true;
+            }
+        }
+
+        for literal in unique.keys() {
+            if !unique.contains_key(&literal.negate()) {
+                if self.m[literal.value] == None {
+                    self.assign(literal.value, !literal.is_negated, None);
+                    propagation_stack.push(*literal);
+                }
+            }
+        }
+
+        propagation_stack
+    }
+
+    // fn propagate(
+    //     &mut self,
+    //     propagation_stack: Vec<Literal>,
+    // ) -> PropagationStatus {
+    //     PropagationStatus::Unresolved
+    // }
 
     fn is_in_assignment(&self, literal: &Literal) -> Option<bool> {
         self.m[literal.value]
@@ -338,6 +401,12 @@ impl Solver {
     }
 
     pub fn solve(&mut self) -> SolverOutput {
+        let mut propagation_stack = Vec::new();
+
+        propagation_stack.extend(self.propagate_unit_clauses());
+        propagation_stack.extend(self.propagate_pure_literals());
+        propagation_stack.extend(self.propagate_unique_literals());
+
         if let PropagationStatus::Conflict(_) = self.propagate() {
             return SolverOutput::Unsat(self.learned_clauses.clone());
         }
